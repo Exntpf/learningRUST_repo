@@ -42,6 +42,7 @@ fn check_guess(guess: &i32, rand_int: &i32) -> bool {
     }
 }
 
+
 fn main() {
 
 
