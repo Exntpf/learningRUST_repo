@@ -11,7 +11,9 @@ A data type implementing the `Copy` trait (ints, char, floats, bool, str) means 
     More rigorously, all data types that have a known size at compile time are stored on the Stack, where copy data is easy - hence the `Copy` trait. All other data is stored in the heap. Strings are a variable size, so can't do `Copy`.
 
 You can print the value of a variable, it's location, and line number to stderr using `dbg!(&var)`, as long as the variable type implements the `Debug` trait. The macro takes ownership of `var` if you let it and returns it back, so can do `let var1 = dbg!(var);`.
-output: [src/main.rs:14] var = type 
+output: `[src/main.rs:14] dbg_input = value in pretty debug format`
+
+Null doesn't exist: there is only enum Option<T>{ Some<T>, None}, which you can return whenever your code could return Null. To assign a value `None`: `let variable_name: Option<some_type> = None;`. This enum forces you to always consider the case when output could be None to keep code safe.
 
 
 ## If & else:
