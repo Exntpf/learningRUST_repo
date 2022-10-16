@@ -1,11 +1,9 @@
 pub mod hosting;
 
-pub mod front_of_house {
-    pub mod serving {
-        pub fn take_order() {}
+pub mod serving {
+    pub fn take_order() {}
 
-        pub fn serve_order() {}
+    pub fn serve_order() {}
 
-        pub fn take_payment() {}
-    }
+    pub fn take_payment() {}
 }
