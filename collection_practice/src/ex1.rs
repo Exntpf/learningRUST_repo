@@ -1,29 +1,33 @@
 use std::collections::HashMap;
 
-// returns tuple with (median: i32, mode: i32)
-pub fn exercise1(list: &mut Vec<i32>)-> (i32, i32){
-    list.sort();
+//returns an immutable reference to the median element.
+fn calc_median(list: &Vec<i32>) -> &i32{
     let median_index = list.len()/2;
-    let median = list.get(median_index);
-    
+    return &list[median_index];
+}
+
+// returns tuple with (median: i32, mode: i32)
+
+pub fn exercise1(mut list: Vec<i32>)-> (i32, i32){
+    list.sort();
+    // median is now an immutable reference to the middle value of the list.
+    let median = calc_median(&list);
+
     let mut list_map = HashMap::new();
-    let mut mode_values: (i32, i32) = (0, 0);
-    for i in list {
+    for i in &list {
+        // increment count of list value
         let count = list_map.entry(i).or_insert(0);
         *count +=1;
+    }
+    println!("{:?}", list_map);
+
+    let mut mode_values: (i32, i32) = (0, 0);
+    for (key, value) in list_map{
         let (mode_num, mode_count) = &mut mode_values;
-        if *count > *mode_count {
-            match list_map.get(i){
-                Some(a) => {
-                    *mode_num = *a;
-                    *mode_count = *count;
-                },
-                None => continue,
-            }
+        if value > *mode_count {
+            *mode_num = *key;
+            *mode_count = value;
         }
     }
-    if let Some(a) = median {
-        return (*a, mode_values.0);
-    }
-    return (0, mode_values.0);
+    return (*median, mode_values.0);
 }
