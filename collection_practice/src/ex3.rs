@@ -29,7 +29,10 @@ fn get_command(s: &String) -> Result<Command, i32>{
         Some(value) => {
             // check first argument
             match value {
-                "Add" => Ok(Command::add),
+                "Add" => {
+                    if command_words.len() == 3 { Ok(Command::add) }
+                    else { Err(-1) }
+                },
                 "Quit" => Ok(Command::quit),
                 "List" => {
                     if let Some(next_arg) = command_words.next(){
@@ -54,26 +57,27 @@ fn get_input() -> String{
     input
 }
 
-fn 
 
 pub fn exercise3(){
-    let mut department_hash = HashMap::new();
+    // department_hash: HashMap<Option<String>, Vec<String>>
+    let mut department_hash: HashMap<Option<&str>, Vec<&str>> = HashMap::new();
     loop {
         let input_string = get_input();
         match get_command(&input_string) {
             Ok(command) =>{
-                let mut input_iter = input_string.split_whitespace().next();
-                match command =>{
+                let mut input_iter = input_string.split_whitespace();
+
+                match command {
                     Command::add => {
-                        if input_iter.nth(2) != "to" {
+                        if input_iter.nth(2).unwrap() != "to" {
                             println!("Incorrect command given. Please enter a valid command.");
                             continue;
                         }
                         let mut dep_people = department_hash
-                            .entry(input_iter.nth(3))
-                            .or_insert(vec![input_iter.nth(1)]);
+                            .entry(input_iter.nth(3).unwrap())
+                            .or_insert(vec![input_iter.nth(1).unwrap()]);
                         if dep_people.len() != 1 {
-                            dep_people.push(input_iter.nth(1));
+                            dep_people.push(input_iter.nth(1).unwrap());
                         }
                     },
                     Command::list_all => {
@@ -83,6 +87,7 @@ pub fn exercise3(){
                         
                     },
                     Command::quit => {
+                        println!("Exercise 3 result: ");
                         return;
                     },
                 }
@@ -107,5 +112,4 @@ pub fn exercise3(){
         }
 
     }
-    println!("Exercise 3 result: ");
 }
