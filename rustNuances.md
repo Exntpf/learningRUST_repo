@@ -106,6 +106,36 @@ fn main() {
 - You can perform numeric operations on ints and int references without needing to de-reference. However, you can’t *compare* int and int references without de-referencing. (the former returns an int, but the latter is an expression that would normally result a boolean and rust doesn’t like that)
 - You *cannot* perform numeric operations on mutable references without de-referencing first.
 
+## Running RUST functions from C
+
+This can be done by generating a shared library `.so` file. Steps are as follows:
+
+- Rust side:
+
+    - include following lines in `Cargo.toml`:
+
+        ```rust
+        [lib]
+        crate-type=["cdylib"]
+        ```
+
+    - after running `cargo build`,  the `.so` file will be generated in `/target/debug/` in the crate root directory.
+
+    - shared library file name will be in the format: `lib`+`crate_name`+`.so`
+
+- C side (assuming that the C file calling the rust code is in the crate root directory):
+
+    - Linking the library and the executable is done at run time, so compile the project first using `gcc example.c -o example -L./target/debug -lcrate_name`
+        - The `-L` flag has the location.
+        - The `-l` flag has the file name. gcc adds the `lib` start and `.so` end on it’s own.
+    - set the `LD_LIBRARY_PATH` environment variable by running either:
+        -  `export LD_LIBRARY_PATH=LD_LIBRARY_PATH:abs/crate/addr/target/debug`
+        - `LD_LIBRARY_PATH=abs/crate/addr/target/debug`
+        - You may use relative addressing as well, just be careful of which directory the terminal is in
+    - the `example` executable should now include the `.so` as if it were a regular library.
+
+- When doing this, be careful of types. the `libc` crate gives you C types in RUST.
+
 # Notes on OOP lang -> RUST
 
 Rust doesn’t have inheritance, and separates data and logic more than other languages by having structs and impl blocks for them.
