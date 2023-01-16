@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::{BufRead, ErrorKind};
 use std::ops::Deref;
 use std::path::Path;
@@ -229,32 +230,107 @@ fn get_tag_bytes<P: AsRef<Path>>(file_path: P, name: &str, att_key: Option<&str>
     let mut reader = Reader::from_file(file_path)?;
     reader.trim_text(true);
     let found_tag = seek_till(&mut reader, name, att_key, att_value)?;
-    println!("get_tag_bytes output: {found_tag:?}");
+    // println!("get_tag_bytes output: {found_tag:?}");
     return Ok(found_tag.deref().to_vec());
+}
+
+/// returns a hashmap of attributes in the first tag with "name" and optionally att_key="att_value"
+/// hashmap is empty if no attributes are found.
+fn get_tag_attributes<P: AsRef<Path>>(file_path: P, name: &str, att_key: Option<&str>, att_value: Option<&str>) -> Result<HashMap<String, String>, XmlError>{
+    let mut reader = Reader::from_file(file_path)?;
+    reader.trim_text(true);
+    let found_tag = seek_till(&mut reader, name, att_key, att_value)?.into_owned();
+    // println!("get_tag_bytes output: {found_tag:?}");
+    let output_map = match found_tag {
+        Event::Start(a) => get_hashmap_from_bytes(a),
+        Event::Empty(a) => get_hashmap_from_bytes(a),
+        _ => return Err(XmlError::TextNotFound),
+    };
+    
+    return Ok(output_map);
+}
+
+// returns a hashmap with the attributes of a Start or Empty tag
+fn get_hashmap_from_bytes(bytes: BytesStart) -> HashMap<String, String>{
+    let mut output = HashMap::new();
+    for att in bytes.into_owned().attributes(){
+        match att {
+            Ok(att) => {
+                let att_key = str::from_utf8(att.key.into_inner()).unwrap().to_owned();
+                let att_value = str::from_utf8(&att.value).unwrap().to_owned();
+                output.insert(att_key, att_value);
+            },
+            Err(_) => continue,
+        }
+    }
+    return output;
 }
 
 
 
 const WADL_PATH: &str = "sep_wadl.xml";
 
+/// given a path and method, returns the Mode of the request, or None if not found
+/// until functionality to generate a hashmap from xml tag attributes is implemented
+/// (either in wadl.rs or xml.rs), it is imperitive that tag key-value pairs
+/// are in format!("{key}=\"{value}\""), utf8 encoded.
 pub fn validate_method(path: &str, method: &str) -> Option<Mode>{
-    let resource_tag = get_tag_bytes(
+    let mut method = method.to_ascii_uppercase();
+    if  !VALID_METHODS.contains(&method.as_str()){
+        return None;
+    }
+    let resource_tag_att = get_tag_attributes(
                         WADL_PATH, 
                         "resource",
                         Some("wx:samplePath"),
                         Some(path));
-    match resource_tag {
-        Ok(bytes) =>{
-            let resource_str = str::from_utf8(&bytes).unwrap();
-            println!("resource_str: {resource_str}");
-            if let Some(id) = resource_str
-            .split_whitespace()
-            .filter(|a| a.starts_with("id"))
-            .next(){
-                println!("{id}");
-                Some(Mode::Mandatory)
-            } else {
-                panic!("sep_wadl contained incorrect whitespace: {resource_str}");
+    
+    let method_id: String = match resource_tag_att {
+        Ok(att_map) =>{
+            if !att_map.contains_key("id"){
+                // this means there's a problem with the wadl which we can't 
+                // do anything about and isn't the client's fault
+                eprintln!("\"resource\" tag does not contain valid id \
+                attribute in the wadl");
+                return None;
+                // unimplemented!("\"resource\" tag does not contain valid id \
+                // attribute in the wadl and we are not handling such a case.");
+            }
+            att_map.get("id").unwrap().to_owned()
+        },
+        Err(e) => {
+            match e {
+                quick_xml::Error::Io(_) => panic!("sep_wadl.xml file not found"),
+                quick_xml::Error::NonDecodable(_) => panic!("sep_wadl.xml file decoding error"),
+                quick_xml::Error::UnexpectedEof(_) => return None,
+                quick_xml::Error::InvalidAttr(_) => return None,
+                XmlError::TextNotFound => return None,
+                _ => panic!("Unexpected error occurred"),
+            }
+        },
+    };
+    method.push_str(method_id.as_str());
+    let method = method.as_str();
+    dbg!(method); 
+    // method_id now = concat!(METHOD, Resource tag's id value)
+    // now we look for that tag, get the mode and return.
+    let method_mode = get_tag_attributes(WADL_PATH, "method", Some("id"), Some(method));
+    match method_mode{
+        Ok(mode_att) => {
+            if !mode_att.contains_key("wx:mode"){
+                eprintln!("\"method\" tag does not contain valid wx:mode \
+                // attribute in the wadl");
+                return None;
+                    // unimplemented!("\"method\" tag does not contain valid wx:mode \
+                    // attribute in the wadl and we are not handling such a case.");
+            }
+            match (mode_att.get("wx:mode").unwrap()).as_str(){
+                "M" => Some(Mode::Mandatory),
+                "O" => Some(Mode::Optional),
+                "D" => Some(Mode::Discouraged),
+                "E" => Some(Mode::Error),
+                _ => { eprintln!("\"method\" tag contained invalid value for wx:mode \
+                attribute"); return None; }
             }
         },
         Err(e) => {
@@ -263,21 +339,25 @@ pub fn validate_method(path: &str, method: &str) -> Option<Mode>{
                 quick_xml::Error::NonDecodable(_) => panic!("sep_wadl.xml file decoding error"),
                 quick_xml::Error::UnexpectedEof(_) => None,
                 quick_xml::Error::InvalidAttr(_) => None,
-                XmlError::TextNotFound => return None,
-                _ => panic!("Unexpected error occurred"),
+                XmlError::TextNotFound => None,
+                _ => { 
+                    eprintln!("Unexpected error occurred while getting method with resource mode"); 
+                    None 
+                },
             }
         },
     }
 }
 
-fn main() {
-    let path_arg = "/dcap";
-    let method_arg = "GET";
-    let path = "sep_wadl.xml";
-    let tag_name = "method";
-    let att_key = "id";
-    let att_value = "POSTDeviceCapability";
+const VALID_METHODS: [&str; 5]= ["GET", "HEAD", "PUT", "POST", "DELETE"];
 
+fn main() {
+    let path_arg = "/ppy/{id1}/si";
+    let method_arg = "GET";
+    // let path = "sep_wadl.xml";
+    // let tag_name = "method";
+    // let att_key = "id";
+    // let att_value = "POSTDeviceCapability";
     println!("{:?}", validate_method(path_arg, method_arg));
 }
 
