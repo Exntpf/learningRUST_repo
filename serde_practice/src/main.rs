@@ -76,6 +76,11 @@ impl<'de> Deserialize<'de> for String6 {
 }
 
 fn main() {
+
+    let mut v = vec![1, 2, 4];
+    v.push(3);
+    v.remove(3);
+    v.pop();
     let my = String6::new("blab").unwrap();
     dbg!(&my);
     println!("my: {my:?}");
