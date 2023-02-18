@@ -2,7 +2,6 @@ use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use serde::de::{self, Visitor};
 use arrayvec::ArrayString;
 use std::fmt;
-use std::error::Error;
 use std::io::ErrorKind;
 
 // #[derive(Serialize, Deserialize, Debug)]

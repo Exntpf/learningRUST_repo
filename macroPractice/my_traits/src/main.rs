@@ -2,11 +2,21 @@ use my_traits::Resource;
 
 use my_macros::Resource;
 
-#[derive(Resource)]
-struct my_resource{
-    href: String,
+pub struct ResourceB{
+    s: String,
 }
 
+impl Resource for ResourceB{
+    fn get_href(&self) -> String {
+        self.s.clone()
+    }
+}
+
+#[derive(Resource)]
+pub struct MyResource{
+    a: String,
+    super_class: ResourceB,
+}
 // impl Resource for my_resource{
 //     fn get_href(&self) -> String{
 //         self.href.to_owned()
@@ -14,6 +24,6 @@ struct my_resource{
 // }
 
 fn main() {
-    let a = my_resource{href: String::from("/xxx")};
+    let a = MyResource{a: String::from("dummy"), super_class: ResourceB { s: String::from("derive works!") }};
     println!("{}", a.get_href());
 }
