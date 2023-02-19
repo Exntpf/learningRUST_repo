@@ -14,7 +14,6 @@ impl Resource for ResourceB{
 
 #[derive(Resource)]
 pub struct MyResource{
-    a: String,
     super_class: ResourceB,
 }
 // impl Resource for my_resource{
@@ -24,6 +23,6 @@ pub struct MyResource{
 // }
 
 fn main() {
-    let a = MyResource{a: String::from("dummy"), super_class: ResourceB { s: String::from("derive works!") }};
+    let a = MyResource{super_class: ResourceB{s: String::from("it works!")}};
     println!("{}", a.get_href());
 }
